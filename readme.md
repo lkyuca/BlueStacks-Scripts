@@ -107,4 +107,4 @@ The script uses percentage-based coordinates (works across resolutions). These a
 ## 🙏 Credits
 
 Built with Python + ADB + BlueStacks 5.  
-Game: [C.A.T.S.: Crash Arena Turbo Stars]((https://www.catsthegame.com/))
+Game: [C.A.T.S.: Crash Arena Turbo Stars](https://www.catsthegame.com/)
