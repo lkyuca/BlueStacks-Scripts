@@ -4,16 +4,6 @@ An automation script that automatically farms Quick Fights in **C.A.T.S.: Crash 
 
 ---
 
-## ✨ Features
-
-- Automatically taps Quick Fight, Start Fight, and the result button
-- Detects **Victory**, **Defeat**, and **Defeat with Win Streak** separately
-- Avoids accidental ad clicks on the "Keep Win Streak" button
-- Tracks your win streak across fights
-- Runs in a loop until you stop it
-
----
-
 ## 📋 Requirements
 
 - [BlueStacks 5](https://www.bluestacks.com/)
@@ -88,6 +78,16 @@ The script uses percentage-based coordinates (works across resolutions). These a
 | Retreat (Streak loss) | 70 | 120 |
 
 > If buttons are in different positions on your setup, hover over them in BlueStacks to get the coordinates and update the `tap()` calls in the script.
+
+---
+
+## ✨ Features
+
+- Automatically taps Quick Fight, Start Fight, and the result button
+- Detects **Victory**, **Defeat**, and **Defeat with Win Streak** separately
+- Avoids accidental ad clicks on the "Keep Win Streak" button
+- Tracks your win streak across fights
+- Runs in a loop until you stop it
 
 ---
 
