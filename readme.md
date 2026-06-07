@@ -35,6 +35,8 @@ pip install Pillow
 1. Open BlueStacks and go to **Settings → Advanced**
 2. Enable **Android Debug Bridge (ADB)**
 3. Note the IP and port shown (usually `127.0.0.1:5555`)
+4. <img width="1008" height="476" alt="image" src="https://github.com/user-attachments/assets/6f340759-7aef-4fc4-babf-b43aca9893ff" />
+
 
 ### 2. Download ADB
 1. Download [Platform Tools](https://developer.android.com/tools/releases/platform-tools) from Google
