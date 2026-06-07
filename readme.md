@@ -47,6 +47,8 @@ Open a terminal and run:
 adb connect 127.0.0.1:5555
 ```
 You should see: `connected to 127.0.0.1:5555`
+<img width="1340" height="81" alt="image" src="https://github.com/user-attachments/assets/b1278745-959f-4e07-aeb2-b73f79593127" />
+
 
 ---
 
