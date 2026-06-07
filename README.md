@@ -1,5 +1,5 @@
 # BlueStacks-Scripts
-I will put the script i use for BlueStacks games in here
+I will put the script i use for BlueStacks games in here with a detailed readme 
 
 
 # 🤖 C.A.T.S. BlueStacks Auto Fight Script
