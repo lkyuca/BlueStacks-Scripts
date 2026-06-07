@@ -93,6 +93,8 @@ The script uses percentage-based coordinates (works across resolutions). These a
 - Tracks your win streak across fights
 - Runs in a loop until you stop it
 
+<img width="464" height="159" alt="image" src="https://github.com/user-attachments/assets/a4eb2e2b-4198-4976-aa4f-39065eaa2f2c" />
+
 ---
 
 ## 🔧 Troubleshooting
