@@ -1,7 +1,7 @@
 # 🤖 C.A.T.S. BlueStacks Auto Fight Script
 
 An automation script that automatically farms Quick Fights in **C.A.T.S.: Crash Arena Turbo Stars** using BlueStacks 5. It detects win/loss outcomes and taps the correct button every time — no ads, no mistakes.
-<img width="828" height="343" alt="image" src="https://github.com/user-attachments/assets/770fcedf-4973-4e63-a039-95c8bef5a680" />
+
 
 ---
 
