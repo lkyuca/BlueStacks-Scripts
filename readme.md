@@ -102,15 +102,9 @@ The script uses percentage-based coordinates (works across resolutions). These a
 **Unknown result detected**
 → The script will print the RGB value of the banner. Share it and the detection thresholds can be updated.
 
----
 
-## 📄 License
-
-MIT License — free to use and modify.
-
----
 
 ## 🙏 Credits
 
 Built with Python + ADB + BlueStacks 5.  
-Game: [C.A.T.S.: Crash Arena Turbo Stars](https://zeptolab.com/games/cats)
+Game: [C.A.T.S.: Crash Arena Turbo Stars]((https://www.catsthegame.com/))
