@@ -3,8 +3,8 @@ import time
 import io
 from PIL import Image
 
-ADB = r"USE YOUR OWN PATH"
-DEVICE = "USE YOUR OWN DEVICE IP"
+ADB = r"C:\Users\lucam\OneDrive\Bureaublad\mappen\Scripts\blue stacks\platform-tools\adb.exe"
+DEVICE = "127.0.0.1:5555"
 
 def adb(cmd):
     return subprocess.run([ADB, "-s", DEVICE] + cmd, capture_output=True)
