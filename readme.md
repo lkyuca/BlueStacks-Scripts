@@ -60,8 +60,9 @@ You should see: `connected to 127.0.0.1:5555`
 ## ▶️ How to Use
 
 1. Open BlueStacks and launch **C.A.T.S.**
-2. Navigate to the **Quick Fight** screen
-3. Run the script:
+2. Navigate to the **main menu** screen
+3. <img width="1953" height="1116" alt="image" src="https://github.com/user-attachments/assets/4434a10a-8986-4a2e-893c-46854988c117" />
+4. Run the script:
 ```bash
 python cats_farm.py
 ```
