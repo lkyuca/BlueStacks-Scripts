@@ -54,13 +54,16 @@ You should see: `connected to 127.0.0.1:5555`
 
 1. Open BlueStacks and launch **C.A.T.S.**
 2. Navigate to the **main menu** screen
-3. <img width="1953" height="1116" alt="image" src="https://github.com/user-attachments/assets/4434a10a-8986-4a2e-893c-46854988c117" />
+<img width="1953" height="1116" alt="image" src="https://github.com/user-attachments/assets/4434a10a-8986-4a2e-893c-46854988c117" />
 4. Run the script:
 ```bash
 python cats_farm.py
 ```
+<img width="957" height="553" alt="image" src="https://github.com/user-attachments/assets/444e1ab4-7bab-416d-85a9-e2d8f43ab221" />
+
 4. When prompted, enter your current win streak (or `0` if you have none)
 5. Switch to BlueStacks — the script starts in 3 seconds!
+<img width="747" height="64" alt="image" src="https://github.com/user-attachments/assets/4aefcd7d-5c43-4b28-8078-90b2ebe1d0fa" />
 
 To stop the script press **Ctrl + C** in the terminal.
 
