@@ -60,7 +60,7 @@ You should see: `connected to 127.0.0.1:5555`
 1. Open BlueStacks and launch **C.A.T.S.**
 2. Make sure your resolution is 1920 x 1080
 <img width="890" height="707" alt="image" src="https://github.com/user-attachments/assets/13913676-41fb-40a5-8e2d-cf1399ea8529" />
-4. Navigate to the **main menu** screen
+4. Navigate to the **main menu**  screen
 <img width="1953" height="1116" alt="image" src="https://github.com/user-attachments/assets/4434a10a-8986-4a2e-893c-46854988c117" />
 5. Run the script:
 ```bash
