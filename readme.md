@@ -69,6 +69,7 @@ python cats_farm.py
 <img width="957" height="553" alt="image" src="https://github.com/user-attachments/assets/444e1ab4-7bab-416d-85a9-e2d8f43ab221" />
 
 4. When prompted, enter your current win streak (or `0` if you have none)
+
 "is should do this automaticly with the new version with the streak detector function"
 6. Switch to BlueStacks — the script starts in 3 seconds!
 <img width="747" height="64" alt="image" src="https://github.com/user-attachments/assets/4aefcd7d-5c43-4b28-8078-90b2ebe1d0fa" />
