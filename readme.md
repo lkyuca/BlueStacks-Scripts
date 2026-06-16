@@ -49,7 +49,7 @@ adb connect 127.0.0.1:5555
 You should see: `connected to 127.0.0.1:5555`
 <img width="1405" height="92" alt="image" src="https://github.com/user-attachments/assets/15092b3b-fae3-4b43-8522-8d2405161ba6" />
 
-## it should perform this action automaticly once you have copy your path in the script
+"it should perform this action automaticly once you have copy your path in the script"
 
 
 
@@ -69,7 +69,7 @@ python cats_farm.py
 <img width="957" height="553" alt="image" src="https://github.com/user-attachments/assets/444e1ab4-7bab-416d-85a9-e2d8f43ab221" />
 
 4. When prompted, enter your current win streak (or `0` if you have none)
- # is should do this automaticly with the new version with the streak detector function
+"is should do this automaticly with the new version with the streak detector function"
 6. Switch to BlueStacks — the script starts in 3 seconds!
 <img width="747" height="64" alt="image" src="https://github.com/user-attachments/assets/4aefcd7d-5c43-4b28-8078-90b2ebe1d0fa" />
 
