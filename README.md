@@ -7,6 +7,5 @@ I will put the scripts in different branches because i am planning to use this r
 every script you want to use be sure to read the readme.md i work hard on the explaination so it will be easy to understand here an example
 <img width="1043" height="752" alt="image" src="https://github.com/user-attachments/assets/e461b05e-d6f3-4ec0-b895-906267b702f8" />
 everything what you will need will be linked so don't be intimidated and give it a shot
-<img width="1043" height="419" alt="image" src="https://github.com/user-attachments/assets/ddab0d77-a1ea-4b6e-a7c6-b328da17ad3a" />
 
 
