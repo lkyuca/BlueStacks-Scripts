@@ -49,6 +49,8 @@ adb connect 127.0.0.1:5555
 You should see: `connected to 127.0.0.1:5555`
 <img width="1405" height="92" alt="image" src="https://github.com/user-attachments/assets/15092b3b-fae3-4b43-8522-8d2405161ba6" />
 
+## it should perform this action automaticly once you have copy your path in the script
+
 
 
 ---
@@ -56,37 +58,27 @@ You should see: `connected to 127.0.0.1:5555`
 ## ▶️ How to Use
 
 1. Open BlueStacks and launch **C.A.T.S.**
-2. Navigate to the **main menu** screen
+2. Make sure your resolution is 1920 x 1080
+<img width="890" height="707" alt="image" src="https://github.com/user-attachments/assets/13913676-41fb-40a5-8e2d-cf1399ea8529" />
+4. Navigate to the **main menu** screen
 <img width="1953" height="1116" alt="image" src="https://github.com/user-attachments/assets/4434a10a-8986-4a2e-893c-46854988c117" />
-4. Run the script:
+5. Run the script:
 ```bash
 python cats_farm.py
 ```
 <img width="957" height="553" alt="image" src="https://github.com/user-attachments/assets/444e1ab4-7bab-416d-85a9-e2d8f43ab221" />
 
 4. When prompted, enter your current win streak (or `0` if you have none)
-5. Switch to BlueStacks — the script starts in 3 seconds!
+ # is should do this automaticly with the new version with the streak detector function
+6. Switch to BlueStacks — the script starts in 3 seconds!
 <img width="747" height="64" alt="image" src="https://github.com/user-attachments/assets/4aefcd7d-5c43-4b28-8078-90b2ebe1d0fa" />
 
-To stop the script press **Ctrl + C** in the terminal.
+To stop the script press **q** in the terminal.
+<img width="910" height="66" alt="image" src="https://github.com/user-attachments/assets/df9ead4b-587e-4f7c-9e61-8408c7bbab4d" />
+
 
 ---
 
-## 🗺️ Button Coordinates
-
-The script uses percentage-based coordinates (works across resolutions). These are calibrated for the default BlueStacks 5 layout:
-
-| Action | X | Y |
-|---|---|---|
-| Quick Fight | 85 | 120 |
-| Start Fight | 50 | 40 |
-| OK (Victory) | 58 | 85 |
-| Retreat (No streak) | 80 | 120 |
-| Retreat (Streak loss) | 70 | 120 |
-
-> If buttons are in different positions on your setup, hover over them in BlueStacks to get the coordinates and update the `tap()` calls in the script.
-
----
 
 ## ✨ Features
 
@@ -102,18 +94,12 @@ The script uses percentage-based coordinates (works across resolutions). These a
 
 ## 🔧 Troubleshooting
 
-**Script clicks the wrong button**
-→ Hover over the correct button in BlueStacks and update the coordinates in the script.
-
-**Fight not finished before result is detected**
-→ Increase `time.sleep(12)` to a higher value like `time.sleep(20)`.
 
 **ADB not recognized**
 → Make sure the path to `adb.exe` in the script is correct.
 
 **Unknown result detected**
-→ The script will print the RGB value of the banner. Share it and the detection thresholds can be updated.
-
+→ The script will send a screenshot to the debug folder 
 
 
 ## 🙏 Credits
