@@ -49,7 +49,7 @@ adb connect 127.0.0.1:5555
 You should see: `connected to 127.0.0.1:5555`
 <img width="1405" height="92" alt="image" src="https://github.com/user-attachments/assets/15092b3b-fae3-4b43-8522-8d2405161ba6" />
 
-"it should perform this action automaticly once you have copy your path in the script"
+"it should perform this action automaticly once you have setup your path correctly in the script"
 
 
 
