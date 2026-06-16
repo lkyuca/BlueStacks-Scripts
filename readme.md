@@ -106,7 +106,7 @@ To stop the script press **q** in the terminal.
 → The script will send a screenshot to the debug folder 
 
 **contact information**
-→ you can send an email if you are really struggeling linked on my [github profile]([(https://github.com/lkyuca)]) 
+→ you can send an email if you are really struggeling linked on my [github profile]([url](https://github.com/lkyuca))
 
 
 ## 🙏 Credits
