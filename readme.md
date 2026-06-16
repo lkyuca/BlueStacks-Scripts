@@ -103,6 +103,9 @@ To stop the script press **q** in the terminal.
 **Unknown result detected**
 → The script will send a screenshot to the debug folder 
 
+**contact information**
+→ you can send an email if you are really struggeling linked on my github profile 
+
 
 ## 🙏 Credits
 
