@@ -1,0 +1,612 @@
+import subprocess
+import os
+import time
+import threading
+import msvcrt
+import io
+import shutil
+from PIL import Image, ImageDraw, ImageFont
+try:
+    import cv2
+    import numpy as np
+except Exception:
+    cv2 = None
+    np = None
+
+ADB = r"C:\Users\lucam\OneDrive\Bureaublad\mappen\Scripts\platform-tools\adb.exe"
+DEVICE = "127.0.0.1:5555"
+
+def get_adb_executable():
+    # Prefer bundled adb if present, otherwise fall back to system adb in PATH
+    if os.path.exists(ADB):
+        return ADB
+    exe = shutil.which("adb")
+    if exe is None:
+        raise FileNotFoundError(f"adb not found. Checked: {ADB} and system PATH")
+    return exe
+
+
+def list_connected_devices():
+    exe = get_adb_executable()
+    res = subprocess.run([exe, "devices"], capture_output=True, text=True)
+    if res.returncode != 0:
+        return []
+    devices = []
+    for line in (res.stdout or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("List of devices"):
+            continue
+        parts = line.split()
+        if len(parts) >= 2 and parts[1] == "device":
+            devices.append(parts[0])
+    return devices
+
+
+def connect_adb_device():
+    if not DEVICE:
+        return False
+    exe = get_adb_executable()
+    res = subprocess.run([exe, "connect", DEVICE], capture_output=True, text=True)
+    out = (res.stdout or "").strip().lower()
+    err = (res.stderr or "").strip().lower()
+    success = "connected to" in out or "already connected" in out
+    if success:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            print(f"ADB connected to {DEVICE}: {out}")
+        return True
+    if os.getenv("CFV3_DEBUG", "0") == "1":
+        print(f"ADB connect failed for {DEVICE}: returncode={res.returncode} stdout={out} stderr={err}")
+    return False
+
+
+def get_target_device():
+    exe = get_adb_executable()
+    if DEVICE:
+        res = subprocess.run([exe, "-s", DEVICE, "get-state"], capture_output=True, text=True)
+        if res.returncode == 0 and "device" in (res.stdout or "").lower():
+            if os.getenv("CFV3_DEBUG", "0") == "1":
+                print(f"Using configured ADB device: {DEVICE}")
+            return DEVICE
+        if connect_adb_device():
+            return DEVICE
+    devices = list_connected_devices()
+    if devices:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            print(f"Auto-detected adb device: {devices[0]}")
+        return devices[0]
+    if os.getenv("CFV3_DEBUG", "0") == "1":
+        print("No adb devices found")
+    return None
+
+
+def adb(cmd):
+    exe = get_adb_executable()
+    device = get_target_device()
+    if device:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            print(f"adb command using device {device}: {' '.join(cmd)}")
+        return subprocess.run([exe, "-s", device] + cmd, capture_output=True)
+    if os.getenv("CFV3_DEBUG", "0") == "1":
+        print(f"adb command without explicit device: {' '.join(cmd)}")
+    return subprocess.run([exe] + cmd, capture_output=True)
+
+
+def capture_screen_bytes():
+    result = adb(["exec-out", "screencap", "-p"])
+    if result.returncode != 0 or not result.stdout:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            stderr = result.stderr.decode(errors="ignore") if result.stderr else ""
+            print(f"adb screencap failed: returncode={result.returncode} stderr={stderr}")
+        return None
+    return result.stdout
+
+
+# Event used to request the main loop to stop from a key press
+stop_event = threading.Event()
+
+
+def _watch_stop_key():
+    """Watch for 'q' keypress in the console and set stop_event to stop the bot."""
+    print("Press 'q' to stop the bot gracefully, or create stop.txt in the script folder.")
+    while not stop_event.is_set():
+        if msvcrt.kbhit():
+            ch = msvcrt.getwch()
+            if ch.lower() == 'q':
+                print("Stop key pressed. Exiting loop after current iteration...")
+                stop_event.set()
+                break
+        time.sleep(0.1)
+
+
+def stop_requested():
+    if stop_event.is_set():
+        return True
+    if os.path.exists("stop.txt"):
+        print("Found stop.txt. Exiting loop after current iteration...")
+        try:
+            os.remove("stop.txt")
+        except Exception:
+            pass
+        stop_event.set()
+        return True
+    return False
+
+
+def sleep_with_stop(duration, interval=0.1):
+    end = time.time() + duration
+    while time.time() < end:
+        if stop_requested():
+            break
+        time.sleep(interval)
+
+
+def get_device_size():
+    """Return (w,h) of the device as reported by `adb shell wm size` or None."""
+    try:
+        exe = get_adb_executable()
+        device = get_target_device()
+        cmd = [exe]
+        if device:
+            cmd += ["-s", device]
+        cmd += ["shell", "wm", "size"]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        out = (res.stdout or "").strip() + (res.stderr or "").strip()
+        # look for 'Physical size: 1920x1080' or 'Physical size: 1280x720'
+        for part in out.splitlines():
+            if "Physical size:" in part:
+                try:
+                    _, size = part.split(":", 1)
+                    w, h = size.strip().split("x")
+                    return int(w), int(h)
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return None
+
+def tap(x, y):
+    width = 1920
+    height = 1080
+    # Interpret inputs flexibly:
+    # - fractions (0 <= v < 1): treated as normalized (0.0-1.0)
+    # - values 1..100: treated as percentages
+    # - values >100: treated as raw pixels
+    if 0 <= x < 1:
+        px = int(x * width)
+    elif x <= 100:
+        px = int(x / 100 * width)
+    else:
+        px = int(x)
+
+    if 0 <= y < 1:
+        py = int(y * height)
+    elif y <= 100:
+        py = int(y / 100 * height)
+    else:
+        py = int(y)
+
+    adb(["shell", "input", "tap", str(px), str(py)])
+
+
+def tap_center():
+    """Tap the center of the device screen."""
+    dev = get_device_size() or (1920, 1080)
+    tx = dev[0] // 2
+    ty = dev[1] // 2
+    adb(["shell", "input", "tap", str(tx), str(ty)])
+
+
+def normalize_cv2_screen(screen):
+    """Rotate portrait screenshots to landscape when needed."""
+    if screen is None:
+        return None
+    if screen.shape[1] < screen.shape[0]:
+        return cv2.rotate(screen, cv2.ROTATE_90_CLOCKWISE)
+    return screen
+
+
+def normalize_pil_image(img):
+    """Rotate portrait PIL images to landscape when needed."""
+    if img is None:
+        return None
+    if img.width < img.height:
+        return img.rotate(-90, expand=True)
+    return img
+
+
+def _build_digit_templates(size=(80, 120)):
+    fonts = []
+    font_paths = [
+        r"C:\Windows\Fonts\arial.ttf",
+        r"C:\Windows\Fonts\verdana.ttf",
+        r"C:\Windows\Fonts\tahoma.ttf",
+    ]
+    for path in font_paths:
+        try:
+            fonts.append(ImageFont.truetype(path, 100))
+        except Exception:
+            pass
+    if not fonts:
+        fonts.append(ImageFont.load_default())
+
+    templates = {}
+    for digit in range(10):
+        best_img = None
+        best_err = None
+        for font in fonts:
+            img = Image.new("L", size, color=255)
+            draw = ImageDraw.Draw(img)
+            text = str(digit)
+            try:
+                w, h = font.getsize(text)
+            except Exception:
+                try:
+                    bbox = font.getbbox(text)
+                    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                except Exception:
+                    bbox = draw.textbbox((0, 0), text, font=font)
+                    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            draw.text(((size[0] - w) / 2, (size[1] - h) / 2), text, font=font, fill=0)
+            arr = np.array(img)
+            _, arr = cv2.threshold(arr, 128, 255, cv2.THRESH_BINARY_INV)
+            error = np.mean(arr.astype(np.float32))
+            if best_err is None or error < best_err:
+                best_err = error
+                best_img = arr
+        templates[str(digit)] = best_img
+    return templates
+
+
+def _classify_digit(img_gray):
+    if img_gray is None:
+        return None
+    _, thresh = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    templates = _build_digit_templates((80, 120))
+    best_digit = None
+    best_score = -1.0
+    for digit, tpl in templates.items():
+        resized = cv2.resize(thresh, tpl.shape[::-1], interpolation=cv2.INTER_AREA)
+        score = cv2.matchTemplate(resized, tpl, cv2.TM_CCOEFF_NORMED)
+        _, maxVal, _, _ = cv2.minMaxLoc(score)
+        if maxVal > best_score:
+            best_score = maxVal
+            best_digit = digit
+    return int(best_digit) if best_digit is not None else None
+
+
+def _segment_digit_regions(gray, min_area=250):
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=1)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    rects = []
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        area = w * h
+        if area < min_area or h < 20 or w < 10:
+            continue
+        rects.append((x, y, w, h))
+    rects = sorted(rects, key=lambda r: r[0])
+    digits = []
+    for x, y, w, h in rects:
+        pad = 4
+        x0 = max(0, x - pad)
+        y0 = max(0, y - pad)
+        x1 = min(gray.shape[1], x + w + pad)
+        y1 = min(gray.shape[0], y + h + pad)
+        digits.append(gray[y0:y1, x0:x1])
+    return digits, thresh
+
+
+def auto_detect_streak():
+    if cv2 is None or np is None:
+        return None
+    data = capture_screen_bytes()
+    if data is None:
+        return None
+    try:
+        img = Image.open(io.BytesIO(data))
+    except Exception:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            print("Failed to parse screenshot image for streak detection")
+        return None
+    img = normalize_pil_image(img)
+    width, height = img.size
+    streak_box = (1360, 760, 1520, 930)
+    if streak_box[2] > width or streak_box[3] > height:
+        streak_box = (int(width * 0.7), int(height * 0.7), int(width * 0.95), int(height * 0.9))
+    streak_img = img.crop(streak_box)
+    streak_gray = cv2.cvtColor(np.array(streak_img), cv2.COLOR_RGB2GRAY)
+    if os.getenv("CFV3_DEBUG", "0") == "1":
+        os.makedirs("debug", exist_ok=True)
+        cv2.imwrite(os.path.join("debug", "streak_region.png"), streak_gray)
+    digits, thresh = _segment_digit_regions(streak_gray)
+    if os.getenv("CFV3_DEBUG", "0") == "1":
+        cv2.imwrite(os.path.join("debug", "streak_thresh.png"), thresh)
+    if not digits:
+        return None
+    recognized = []
+    for i, digit_img in enumerate(digits):
+        digit = _classify_digit(digit_img)
+        if digit is None:
+            return None
+        recognized.append(str(digit))
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            os.makedirs("debug", exist_ok=True)
+            cv2.imwrite(os.path.join("debug", f"streak_digit_{i}.png"), digit_img)
+    try:
+        streak_value = int("".join(recognized))
+    except ValueError:
+        return None
+    if 0 <= streak_value < 1000:
+        print(f"Auto-detected streak: {streak_value}")
+        return streak_value
+    return None
+
+
+def find_template_on_screen(template_path, threshold=0.8, search_region=None):
+    """Return (x,y) center of matched template on current screen, or None.
+
+    This does multi-scale (template resized) matching and prints debug info when requested.
+    """
+    if cv2 is None or np is None:
+        raise RuntimeError("OpenCV (cv2) and numpy are required for template matching. Install via 'pip install opencv-python numpy'")
+    if not os.path.exists(template_path):
+        return None
+    result = adb(["exec-out", "screencap", "-p"])
+    if result.returncode != 0 or not result.stdout:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            print(f"adb screencap failed: returncode={result.returncode} stderr={result.stderr.decode(errors='ignore')}")
+        return None
+    screen = cv2.imdecode(np.frombuffer(result.stdout, np.uint8), cv2.IMREAD_COLOR)
+    if screen is None:
+        if os.getenv("CFV3_DEBUG", "0") == "1":
+            print("cv2.imdecode failed on screenshot data")
+        return None
+    screen = normalize_cv2_screen(screen)
+
+    screen_h, screen_w = screen.shape[:2]
+    # convert to gray for robust matching
+    screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+    if search_region is not None:
+        x1, y1, x2, y2 = search_region
+        if 0 <= x1 <= 1 and 0 <= x2 <= 1:
+            x1 = int(x1 * screen_w)
+            x2 = int(x2 * screen_w)
+        if 0 <= y1 <= 1 and 0 <= y2 <= 1:
+            y1 = int(y1 * screen_h)
+            y2 = int(y2 * screen_h)
+        x1 = max(0, min(screen_w - 1, x1))
+        x2 = max(0, min(screen_w, x2))
+        y1 = max(0, min(screen_h - 1, y1))
+        y2 = max(0, min(screen_h, y2))
+        if x2 <= x1 or y2 <= y1:
+            return None
+        region_gray = screen_gray[y1:y2, x1:x2]
+    else:
+        region_gray = screen_gray
+        x1 = y1 = 0
+
+    tpl = cv2.imread(template_path, cv2.IMREAD_COLOR)
+    if tpl is None:
+        return None
+    tpl_gray = cv2.cvtColor(tpl, cv2.COLOR_BGR2GRAY)
+
+    best_val = -1.0
+    best_loc = None
+    best_size = None
+
+    # try multiple template scales to handle DPI/scale differences
+    for scale in np.linspace(0.7, 1.3, 13):
+        tw = int(tpl_gray.shape[1] * scale)
+        th = int(tpl_gray.shape[0] * scale)
+        if tw < 8 or th < 8 or tw > region_gray.shape[1] or th > region_gray.shape[0]:
+            continue
+        tpl_resized = cv2.resize(tpl_gray, (tw, th), interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR)
+        try:
+            res = cv2.matchTemplate(region_gray, tpl_resized, cv2.TM_CCOEFF_NORMED)
+        except Exception:
+            continue
+        _, maxVal, _, maxLoc = cv2.minMaxLoc(res)
+        if maxVal > best_val:
+            best_val = maxVal
+            best_loc = maxLoc
+            best_size = (tw, th)
+
+    # write debug artifacts if requested via env var
+    dbg = os.getenv("CFV3_DEBUG", "0") == "1"
+    if dbg:
+        os.makedirs("debug", exist_ok=True)
+        cv2.imwrite(os.path.join("debug", "screen.png"), screen)
+        with open(os.path.join("debug", "match.txt"), "w") as f:
+            f.write(f"best_val={best_val}\n")
+            f.write(f"best_size={best_size}\n")
+    if best_val >= threshold and best_loc is not None and best_size is not None:
+        cx = best_loc[0] + best_size[0] // 2 + x1
+        cy = best_loc[1] + best_size[1] // 2 + y1
+        if dbg:
+            print(f"Template matched: val={best_val:.3f} loc={best_loc} size={best_size} screen_shape={screen.shape} search_region={(x1,y1,x2,y2) if search_region is not None else None}")
+        # return center coords and best_val and screen size
+        return (cx, cy, float(best_val), screen.shape[1], screen.shape[0])
+    if dbg:
+        print(f"No match (best_val={best_val:.3f}) for template {template_path}")
+    return None
+
+
+def _distance(a, b):
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+
+
+def _is_safe_match(match, avoid_matches, max_distance=120):
+    if match is None:
+        return False
+    if not avoid_matches:
+        return True
+    mx, my, _, _, _ = match
+    for avoid in avoid_matches:
+        if avoid is None:
+            continue
+        ax, ay, _, _, _ = avoid
+        if _distance((mx, my), (ax, ay)) < max_distance:
+            return False
+    return True
+
+
+def tap_button(template_path=None, fallback=None, threshold=0.8, search_region=None, avoid_templates=None, skip_if_avoid=False):
+    """Try to find `template_path` on screen and tap its center; otherwise tap `fallback`.
+    `fallback` may be a (x,y) tuple in pixels or percentages (1-100)."""
+    if stop_requested():
+        return False
+    if template_path:
+        try:
+            found = find_template_on_screen(template_path, threshold=threshold, search_region=search_region)
+        except RuntimeError:
+            found = None
+        if found:
+            avoid_matches = []
+            if avoid_templates:
+                for avoid_template in avoid_templates:
+                    try:
+                        avoid_match = find_template_on_screen(
+                            avoid_template,
+                            threshold=0.85,
+                            search_region=search_region,
+                        )
+                    except RuntimeError:
+                        avoid_match = None
+                    avoid_matches.append(avoid_match)
+            if not _is_safe_match(found, avoid_matches):
+                dbg = os.getenv("CFV3_DEBUG", "0") == "1"
+                if dbg:
+                    print(f"Skipping template tap because avoid template matched too close to {template_path}")
+                if skip_if_avoid:
+                    print(f"Avoided unsafe tap for {template_path}; not using fallback.")
+                    return False
+                found = None
+        if found:
+            # found = (cx, cy, best_val, screen_w, screen_h)
+            cx, cy, best_val, screen_w, screen_h = found
+            # determine device size and scale if needed
+            dev = get_device_size()
+            if dev:
+                dev_w, dev_h = dev
+                sx = dev_w / float(screen_w)
+                sy = dev_h / float(screen_h)
+                tx = int(cx * sx)
+                ty = int(cy * sy)
+            else:
+                tx = int(cx)
+                ty = int(cy)
+            dbg = os.getenv("CFV3_DEBUG", "0") == "1"
+            if dbg:
+                print(f"Tapping matched template {template_path} -> screen({cx},{cy}) score={best_val:.3f} -> device({tx},{ty})")
+            adb(["shell", "input", "tap", str(tx), str(ty)])
+            return True
+    if fallback:
+        if stop_requested():
+            return False
+        dbg = os.getenv("CFV3_DEBUG", "0") == "1"
+        if dbg:
+            if isinstance(fallback[0], float) or isinstance(fallback[1], float) or (0 <= fallback[0] <= 100 and 0 <= fallback[1] <= 100):
+                print(f"Using fallback tap percentages: {fallback}")
+            else:
+                print(f"Using fallback tap pixels: {fallback}")
+        tap(fallback[0], fallback[1])
+        return True
+    return False
+
+def detect_result(timeout=25, interval=1):
+    deadline = time.time() + timeout
+    while True:
+        if stop_requested():
+            return "stopped"
+        data = capture_screen_bytes()
+        if data is None:
+            if os.getenv("CFV3_DEBUG", "0") == "1":
+                print("Failed to capture screen for result detection")
+            return "unknown"
+        try:
+            img = Image.open(io.BytesIO(data))
+        except Exception:
+            if os.getenv("CFV3_DEBUG", "0") == "1":
+                print("Failed to parse screenshot image for result detection")
+            return "unknown"
+        img = normalize_pil_image(img)
+        r, g, b, *_ = img.getpixel((728, 200))
+        print(f"  Banner pixel RGB: ({r}, {g}, {b})")
+        if r > 180 and g < 60 and b < 60:
+            return "victory"
+        if r > 80 and g < 60 and b < 40:
+            return "defeat"
+        if time.time() >= deadline:
+            if os.getenv("CFV3_DEBUG", "0") == "1":
+                os.makedirs("debug", exist_ok=True)
+                img.save(os.path.join("debug", "unknown_result.png"))
+                print("  Saved debug unknown result screen to debug/unknown_result.png")
+            return "unknown"
+        print("  Result not detected yet, waiting...")
+        sleep_with_stop(interval)
+
+win_streak = auto_detect_streak()
+if win_streak is None:
+    win_streak = int(input("Do you have a current win streak? Enter the number (0 if none): "))
+print("Starting in 3 seconds... switch to BlueStacks!")
+time.sleep(3)
+
+fight_count = 0
+
+# Start background thread to listen for stop key
+threading.Thread(target=_watch_stop_key, daemon=True).start()
+
+while True:
+    if stop_requested():
+        print("Stop requested. Exiting.")
+        break
+    print(f"\n--- Fight {fight_count + 1} | Current streak: {win_streak} ---")
+    fight_count += 1
+
+    # 1. Quick Fight
+    print("Tapping Quick Fight...")
+    if fight_count > 1:
+        time.sleep(4)  # Extra delay for 2nd fight onwards
+    clicked = tap_button(
+        template_path="templates/quick_fight.png",
+        fallback=(1300, 860),
+        threshold=0.9,
+        search_region=(0.35, 0.55, 0.95, 0.95),
+        avoid_templates=["templates/avoid_keep_win_streak.png"],
+        skip_if_avoid=True,
+    )
+    if not clicked:
+        print("Quick Fight tap skipped because the blocked button was detected. Waiting and retrying next loop.")
+        sleep_with_stop(3)
+        continue
+    sleep_with_stop(3)
+
+    # 2. Start Fight
+    print("Tapping Start Fight...")
+    tap_button(template_path="templates/start_fight.png", fallback=(960, 860))
+    sleep_with_stop(12)
+
+    # 3. Detect result
+    result = detect_result()
+    print(f"  Result: {result}")
+
+    if result == "stopped":
+        print("Bot detected stop signal during result wait. Exiting.")
+        break
+    if result == "victory":
+        win_streak += 1
+        print(f"  WIN - streak is now {win_streak} - Tapping OK...")
+        tap_button(template_path="templates/ok.png", fallback=(960, 870))
+
+    elif result == "defeat":
+        if win_streak > 0:
+            print(f"  LOSS - had streak of {win_streak} - Tapping streak loss Retreat...")
+            tap_button(template_path="templates/streak_loss_retreat.png", fallback=(760, 870))
+        else:
+            print("  LOSS - no streak - Tapping OK...")
+            tap_button(template_path="templates/ok.png", fallback=(960, 870))
+        win_streak = 0
+        sleep_with_stop(8)  # Wait for main screen to fully load before next loop
