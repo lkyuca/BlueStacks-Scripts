@@ -13,7 +13,7 @@ except Exception:
     cv2 = None
     np = None
 
-ADB = r"C:\Users\lucam\OneDrive\Bureaublad\mappen\Scripts\platform-tools\adb.exe"
+ADB = r"YOUR OWN PATH"
 DEVICE = "127.0.0.1:5555"
 
 def get_adb_executable():
